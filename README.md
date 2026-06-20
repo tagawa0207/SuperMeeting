@@ -1,0 +1,67 @@
+# SuperMeeting 🧠
+
+Google Meet などのオンライン会議で、**リアルタイムに議事ノートを画面共有してファシリテーション**するための Web アプリです。
+ブラウザ標準の音声認識で発話を書き起こし、AI が「要約・論点・決定事項・TODO・未解決の問い・議論の図示」へ自動整理します。
+
+> 第一歩として **動く MVP の土台** を実装しています。音声書き起こし → AI 整理 → 画面共有用ボード、という主要フローが通っています。
+
+## できること（現状）
+
+- 🎙️ **音声書き起こし** — ブラウザ標準の Web Speech API（日本語 `ja-JP`、Chrome 推奨）。長時間会議向けに自動再開対応。
+- 📝 **議事の整理** — 現在の議論の要約。
+- 🎯 **論点の提示** — 論点を `未着手 / 議論中 / 結論あり` のステータス付きで一覧。
+- ✅ **決定事項の抽出**
+- 📌 **TODO の抽出** — 担当者・期限を読み取れる範囲で付与。
+- ❓ **未解決の問いの可視化**
+- 🗺️ **議論の図示** — Mermaid 図でリアルタイムに構造化。
+- 🖥️ **画面共有前提のレイアウト** — 左に書き起こし、右に整理結果ボード。
+
+「✨ いま整理する」で即時分析、「自動更新」で 15 秒ごとに自動分析します。
+マイクが使えない環境でも「サンプル投入」や手入力で動作確認できます。
+
+## 動かし方
+
+```bash
+npm install
+cp .env.example .env.local   # 任意: Claude API キーを設定
+npm run dev
+# http://localhost:3000
+```
+
+### AI エンジンについて
+
+- **`ANTHROPIC_API_KEY` を設定した場合** … Claude（既定 `claude-opus-4-8`、`ANTHROPIC_MODEL` で変更可）が
+  structured outputs を使って高精度に整理します。
+- **未設定の場合** … サーバ側のルールベース分析にフォールバックし、キー無しでも動作します。
+  UI のバッジで現在のエンジンを確認できます。
+
+## アーキテクチャ
+
+```
+src/
+  app/
+    page.tsx                 画面全体（コントロール + 2カラム）
+    api/analyze/route.ts     分析 API（POST /api/analyze）
+  hooks/
+    useTranscription.ts      音声認識の状態管理
+    useAnalysis.ts           分析の実行 / 自動更新
+  lib/
+    types.ts                 ドメイン型（書き起こし・分析結果）
+    stt/                     音声認識（Web Speech API ラッパー、差し替え可能な設計）
+    ai/
+      analyze.ts             エンジン選択（Claude ↔ ルールベース）
+      claude.ts              Claude 呼び出し（structured outputs）
+      heuristic.ts           ルールベース・フォールバック
+      prompt.ts              プロンプト + JSON スキーマ
+  components/                表示部品（ボード・各パネル・Mermaid 描画）
+```
+
+STT も AI も差し替えやすいよう層を分けています（例: Whisper / Deepgram への置換、別 LLM への切替）。
+
+## 今後の拡張余地
+
+- 高精度なクラウド音声認識（Whisper 等）と話者分離
+- 調査・社内情報検索（Web 検索ツール、社内ドキュメント／Slack／Drive 連携）
+- 分析結果のストリーミング表示・差分更新
+- 議事録のエクスポート（Markdown / Notion / Slack 投稿）
+```
