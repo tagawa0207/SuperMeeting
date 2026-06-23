@@ -1,0 +1,30 @@
+{
+  "manifest_version": 3,
+  "name": "SuperMeeting Speaker Bridge",
+  "version": "0.1.0",
+  "description": "Google Meet の発言者を検出し、話者付きの書き起こしを SuperMeeting アプリへ送ります。",
+  "permissions": ["tabs", "storage"],
+  "host_permissions": [
+    "https://meet.google.com/*",
+    "http://localhost:3000/*",
+    "http://127.0.0.1:3000/*"
+  ],
+  "background": {
+    "service_worker": "src/background.js"
+  },
+  "action": {
+    "default_title": "SuperMeeting Speaker Bridge"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://meet.google.com/*"],
+      "js": ["src/meet/content.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["http://localhost:3000/*", "http://127.0.0.1:3000/*"],
+      "js": ["src/app/bridge.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

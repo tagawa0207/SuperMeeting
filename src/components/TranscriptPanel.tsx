@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { TranscriptSegment } from "@/lib/types";
+import { speakerColor } from "@/lib/speakers";
 
 function formatTime(at: number): string {
   return new Date(at).toLocaleTimeString("ja-JP", {
@@ -11,13 +12,28 @@ function formatTime(at: number): string {
   });
 }
 
+function SpeakerTag({ name }: { name?: string }) {
+  if (!name) return null;
+  const color = speakerColor(name);
+  return (
+    <span
+      className="mr-1.5 rounded px-1.5 py-0.5 text-xs font-medium"
+      style={{ backgroundColor: `${color}22`, color }}
+    >
+      {name}
+    </span>
+  );
+}
+
 export function TranscriptPanel({
   segments,
   interim,
+  interimSpeaker,
   onAddManual,
 }: {
   segments: TranscriptSegment[];
   interim: string;
+  interimSpeaker: string | null;
   onAddManual: (text: string) => void;
 }) {
   const [draft, setDraft] = useState("");
@@ -62,15 +78,27 @@ export function TranscriptPanel({
           </p>
         )}
         {segments.map((seg) => (
-          <div key={seg.id} className="rounded-lg bg-slate-900/50 p-2">
-            <span className="mr-2 text-xs text-slate-500">
-              {formatTime(seg.at)}
-            </span>
+          <div
+            key={seg.id}
+            className="rounded-lg bg-slate-900/50 p-2"
+            style={
+              seg.speaker
+                ? { borderLeft: `3px solid ${speakerColor(seg.speaker)}` }
+                : undefined
+            }
+          >
+            <div className="mb-0.5 flex items-center">
+              <SpeakerTag name={seg.speaker} />
+              <span className="text-xs text-slate-500">
+                {formatTime(seg.at)}
+              </span>
+            </div>
             <span className="text-slate-200">{seg.text}</span>
           </div>
         ))}
         {interim && (
           <div className="rounded-lg border border-dashed border-slate-600 p-2 text-slate-400">
+            <SpeakerTag name={interimSpeaker || undefined} />
             {interim}
           </div>
         )}

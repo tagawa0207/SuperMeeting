@@ -8,6 +8,8 @@ Google Meet などのオンライン会議で、**リアルタイムに議事ノ
 ## できること（現状）
 
 - 🎙️ **音声書き起こし** — ブラウザ標準の Web Speech API（日本語 `ja-JP`、Chrome 推奨）。長時間会議向けに自動再開対応。
+- 🗣️ **話者分離** — Chrome 拡張（`extension/`）が Google Meet の発言者を検出し、発話に話者ラベルを自動付与。
+  拡張なしでも、参加者を登録して現在の発言者を手動で切り替えられる（半自動）。AI は話者を踏まえて TODO 担当を振り分ける。
 - 📝 **議事の整理** — 現在の議論の要約。
 - 🎯 **論点の提示** — 論点を `未着手 / 議論中 / 結論あり` のステータス付きで一覧。
 - ✅ **決定事項の抽出**
@@ -35,32 +37,52 @@ npm run dev
 - **未設定の場合** … サーバ側のルールベース分析にフォールバックし、キー無しでも動作します。
   UI のバッジで現在のエンジンを確認できます。
 
+## 話者分離（Chrome 拡張）
+
+別タブの Web アプリからは Meet タブの中（誰が発言中か）を覗けないため、
+話者分離は **Meet タブの中で動く Chrome 拡張**が担当します。
+インストールと使い方は [`extension/README.md`](extension/README.md) を参照してください。
+
+- 拡張が Meet の発言者を検出し、書き起こしに話者を付けて本アプリへ送信
+- Meet の DOM 変更に備え、オーバーレイで**手動固定**も可能（常に動作）
+- 拡張なしでも、本アプリの話者バーで参加者登録＋現在の発言者の手動切替が可能
+
 ## アーキテクチャ
 
 ```
-src/
+src/                         （Web アプリ）
   app/
-    page.tsx                 画面全体（コントロール + 2カラム）
+    page.tsx                 画面全体（コントロール + 話者バー + 2カラム）
     api/analyze/route.ts     分析 API（POST /api/analyze）
   hooks/
-    useTranscription.ts      音声認識の状態管理
+    useTranscription.ts      音声認識・話者付与・外部発話の取り込み
     useAnalysis.ts           分析の実行 / 自動更新
+    useExtensionBridge.ts    Chrome 拡張からの話者付き発話を購読
   lib/
     types.ts                 ドメイン型（書き起こし・分析結果）
+    speakers.ts              話者の色割り当て
+    transcript.ts            話者ラベル付き整形（AI 入力）
+    bridge.ts                拡張との postMessage プロトコル
     stt/                     音声認識（Web Speech API ラッパー、差し替え可能な設計）
     ai/
       analyze.ts             エンジン選択（Claude ↔ ルールベース）
       claude.ts              Claude 呼び出し（structured outputs）
       heuristic.ts           ルールベース・フォールバック
       prompt.ts              プロンプト + JSON スキーマ
-  components/                表示部品（ボード・各パネル・Mermaid 描画）
+  components/                表示部品（ボード・各パネル・話者バー・Mermaid 描画）
+
+extension/                   （Chrome 拡張: 話者分離）
+  manifest.json
+  src/meet/content.js        Meet の発言者検出 + 書き起こし + オーバーレイ
+  src/app/bridge.js          アプリ側へ window.postMessage で中継
+  src/background.js          Meet タブ → アプリタブの中継
 ```
 
 STT も AI も差し替えやすいよう層を分けています（例: Whisper / Deepgram への置換、別 LLM への切替）。
 
 ## 今後の拡張余地
 
-- 高精度なクラウド音声認識（Whisper 等）と話者分離
+- 高精度なクラウド音声認識（Whisper 等）／ Meet Media API による堅牢な話者分離
 - 調査・社内情報検索（Web 検索ツール、社内ドキュメント／Slack／Drive 連携）
 - 分析結果のストリーミング表示・差分更新
 - 議事録のエクスポート（Markdown / Notion / Slack 投稿）

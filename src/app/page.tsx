@@ -1,32 +1,55 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranscription } from "@/hooks/useTranscription";
 import { useAnalysis } from "@/hooks/useAnalysis";
+import { useExtensionBridge } from "@/hooks/useExtensionBridge";
 import { TranscriptPanel } from "@/components/TranscriptPanel";
 import { AnalysisBoard } from "@/components/AnalysisBoard";
+import { SpeakerBar } from "@/components/SpeakerBar";
+import { knownSpeakers } from "@/lib/transcript";
 
-// デモ用のサンプル会議（マイクが使えない環境でも動作確認できる）。
-const SAMPLE = [
-  "今日は新しい採用管理ツールの導入について議論します。",
-  "現状の課題は、応募者の情報がスプレッドシートに散らばっていて進捗が見えないことです。",
-  "田中さんから、候補としてGreenhouseとWorkableが挙がっています。",
-  "コストはWorkableのほうが安いですが、Greenhouseのほうが面接連携が強いという意見が出ました。",
-  "セキュリティ要件を満たすか確認する必要があります。",
-  "ということで、まずは両ツールのトライアルを申し込む方針で合意しました。",
-  "佐藤さんが来週までにセキュリティチェックリストを作成して持ち帰ります。",
+// デモ用のサンプル会議（話者付き。マイク/拡張が無くても話者分離の動きを確認できる）。
+const SAMPLE: { speaker: string; text: string }[] = [
+  { speaker: "司会", text: "今日は新しい採用管理ツールの導入について議論します。" },
+  { speaker: "田中", text: "現状の課題は、応募者の情報が散らばっていて進捗が見えないことです。" },
+  { speaker: "田中", text: "候補としてGreenhouseとWorkableが挙がっています。" },
+  { speaker: "佐藤", text: "コストはWorkableのほうが安いと思います。" },
+  { speaker: "鈴木", text: "ただ面接連携はGreenhouseのほうが強いという印象です。" },
+  { speaker: "佐藤", text: "セキュリティ要件を満たすか確認する必要がありますね。" },
+  { speaker: "司会", text: "ということで、まずは両ツールのトライアルを申し込む方針で合意しました。" },
+  { speaker: "佐藤", text: "私が来週までにセキュリティチェックリストを作成して持ち帰ります。" },
 ];
 
 const AUTO_INTERVAL_MS = 15000;
 
 export default function Home() {
   const t = useTranscription();
-  const [autoMode, setAutoMode] = useState(false);
-  const analysis = useAnalysis(t.fullText, autoMode ? AUTO_INTERVAL_MS : 0);
+  const [autoAnalyze, setAutoAnalyze] = useState(false);
+  const [manualParticipants, setManualParticipants] = useState<string[]>([]);
+  const analysis = useAnalysis(t.fullText, autoAnalyze ? AUTO_INTERVAL_MS : 0);
+
+  // Chrome 拡張からの話者付き発話を取り込む。
+  const bridge = useExtensionBridge({
+    onSegment: (text, speaker, at) => t.ingestSegment(text, speaker, at),
+    onInterim: (text, speaker) => t.ingestInterim(text, speaker),
+  });
+  const extConnected = bridge.connected;
+
+  // 参加者一覧 = 登場済み話者 + 手動追加。
+  const participants = useMemo(() => {
+    const set = new Set<string>([
+      ...knownSpeakers(t.segments),
+      ...manualParticipants,
+    ]);
+    return [...set];
+  }, [t.segments, manualParticipants]);
 
   const loadSample = () => {
     t.clear();
-    SAMPLE.forEach((line) => t.addManual(line));
+    SAMPLE.forEach((line, i) =>
+      t.ingestSegment(line.text, line.speaker, Date.now() + i),
+    );
   };
 
   return (
@@ -52,9 +75,15 @@ export default function Home() {
         ) : (
           <button
             onClick={t.start}
-            disabled={!t.supported}
+            disabled={!t.supported || extConnected}
             className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-sky-500 disabled:cursor-not-allowed disabled:opacity-40"
-            title={t.supported ? "" : "このブラウザは音声認識に非対応（Chrome 推奨）"}
+            title={
+              extConnected
+                ? "拡張から受信中のため、ローカル録音は不要です"
+                : t.supported
+                  ? ""
+                  : "このブラウザは音声認識に非対応（Chrome 推奨）"
+            }
           >
             🎙️ 録音開始
           </button>
@@ -71,8 +100,8 @@ export default function Home() {
         <label className="flex items-center gap-2 text-sm text-slate-300">
           <input
             type="checkbox"
-            checked={autoMode}
-            onChange={(e) => setAutoMode(e.target.checked)}
+            checked={autoAnalyze}
+            onChange={(e) => setAutoAnalyze(e.target.checked)}
             className="h-4 w-4 accent-sky-500"
           />
           自動更新（{AUTO_INTERVAL_MS / 1000}秒ごと）
@@ -95,17 +124,39 @@ export default function Home() {
         )}
       </header>
 
+      {/* 話者バー */}
+      <SpeakerBar
+        speakers={participants}
+        currentSpeaker={t.currentSpeaker}
+        onSelect={t.setCurrentSpeaker}
+        onAdd={(name) => setManualParticipants((prev) => [...prev, name])}
+        autoMode={extConnected}
+      />
+
       {/* ステータス行 */}
       <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400">
-        {!t.supported && (
+        <span
+          className={`rounded px-2 py-1 ${
+            extConnected
+              ? "bg-emerald-500/20 text-emerald-300"
+              : "bg-slate-700 text-slate-300"
+          }`}
+        >
+          {extConnected
+            ? "🔌 Meet 拡張 接続中（話者を自動付与）"
+            : "🔌 Meet 拡張 未接続（手動/サンプルで利用可）"}
+        </span>
+        {!t.supported && !extConnected && (
           <span className="rounded bg-amber-500/20 px-2 py-1 text-amber-300">
-            ⚠️ このブラウザは音声認識に非対応です。「サンプル投入」や手入力で試せます（Chrome 推奨）。
+            ⚠️ このブラウザは音声認識に非対応です（Chrome 推奨）。
           </span>
         )}
         {analysis.analysis && (
           <span className="rounded bg-slate-700 px-2 py-1">
             分析エンジン:{" "}
-            {analysis.analysis.engine === "claude" ? "🟢 Claude" : "⚪ ルールベース"}
+            {analysis.analysis.engine === "claude"
+              ? "🟢 Claude"
+              : "⚪ ルールベース"}
           </span>
         )}
         {analysis.lastAnalyzedAt && (
@@ -115,15 +166,18 @@ export default function Home() {
           </span>
         )}
         {t.error && <span className="text-amber-400">{t.error}</span>}
-        {analysis.error && <span className="text-red-400">{analysis.error}</span>}
+        {analysis.error && (
+          <span className="text-red-400">{analysis.error}</span>
+        )}
       </div>
 
       {/* メイン: 左 = 書き起こし / 右 = AI ノート */}
       <div className="grid flex-1 grid-cols-1 gap-4 lg:grid-cols-[minmax(280px,360px)_1fr]">
-        <div className="h-[calc(100vh-220px)] min-h-[400px]">
+        <div className="h-[calc(100vh-280px)] min-h-[400px]">
           <TranscriptPanel
             segments={t.segments}
             interim={t.interim}
+            interimSpeaker={t.interimSpeaker}
             onAddManual={t.addManual}
           />
         </div>

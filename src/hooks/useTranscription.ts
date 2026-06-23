@@ -6,6 +6,7 @@ import {
   SpeechController,
   isSpeechRecognitionSupported,
 } from "@/lib/stt/webSpeech";
+import { formatTranscriptForAI } from "@/lib/transcript";
 
 let segmentCounter = 0;
 
@@ -14,14 +15,23 @@ export interface UseTranscription {
   listening: boolean;
   segments: TranscriptSegment[];
   interim: string;
+  /** 暫定発話の話者（拡張からの interim 用）。 */
+  interimSpeaker: string | null;
   error: string | null;
-  /** 全確定発話を連結したテキスト（AI 分析の入力に使う）。 */
+  /** 手動モードでの現在の話者。null なら未指定。 */
+  currentSpeaker: string | null;
+  /** 話者ラベル付きの全文（AI 分析の入力）。 */
   fullText: string;
+  setCurrentSpeaker: (name: string | null) => void;
   start: () => void;
   stop: () => void;
   clear: () => void;
-  /** デモ用に手入力で発話を追加する。 */
+  /** 手入力で発話を追加する（現在の話者を付与）。 */
   addManual: (text: string) => void;
+  /** 外部（Chrome 拡張）から話者付き発話を取り込む。 */
+  ingestSegment: (text: string, speaker: string, at?: number) => void;
+  /** 外部からの暫定発話を反映する。 */
+  ingestInterim: (text: string, speaker: string) => void;
 }
 
 export function useTranscription(): UseTranscription {
@@ -29,26 +39,39 @@ export function useTranscription(): UseTranscription {
   const [listening, setListening] = useState(false);
   const [segments, setSegments] = useState<TranscriptSegment[]>([]);
   const [interim, setInterim] = useState("");
+  const [interimSpeaker, setInterimSpeaker] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [currentSpeaker, setCurrentSpeaker] = useState<string | null>(null);
   const controllerRef = useRef<SpeechController | null>(null);
+  // 最新の currentSpeaker を音声認識コールバックから参照するための ref。
+  const currentSpeakerRef = useRef<string | null>(null);
+  currentSpeakerRef.current = currentSpeaker;
 
   useEffect(() => {
     setSupported(isSpeechRecognitionSupported());
   }, []);
 
-  const appendFinal = useCallback((text: string) => {
-    if (!text) return;
-    setSegments((prev) => [
-      ...prev,
-      { id: `seg-${++segmentCounter}`, text, at: Date.now() },
-    ]);
-  }, []);
+  const appendSegment = useCallback(
+    (text: string, speaker: string | null, at = Date.now()) => {
+      if (!text) return;
+      setSegments((prev) => [
+        ...prev,
+        {
+          id: `seg-${++segmentCounter}`,
+          text,
+          at,
+          speaker: speaker || undefined,
+        },
+      ]);
+    },
+    [],
+  );
 
   const start = useCallback(() => {
     setError(null);
     const controller = new SpeechController({
       onFinal: (text) => {
-        appendFinal(text);
+        appendSegment(text, currentSpeakerRef.current);
         setInterim("");
       },
       onInterim: (text) => setInterim(text),
@@ -58,7 +81,7 @@ export function useTranscription(): UseTranscription {
     controllerRef.current = controller;
     controller.start();
     setListening(true);
-  }, [appendFinal]);
+  }, [appendSegment]);
 
   const stop = useCallback(() => {
     controllerRef.current?.stop();
@@ -70,29 +93,49 @@ export function useTranscription(): UseTranscription {
   const clear = useCallback(() => {
     setSegments([]);
     setInterim("");
+    setInterimSpeaker(null);
   }, []);
 
   const addManual = useCallback(
-    (text: string) => appendFinal(text.trim()),
-    [appendFinal],
+    (text: string) => appendSegment(text.trim(), currentSpeakerRef.current),
+    [appendSegment],
   );
+
+  const ingestSegment = useCallback(
+    (text: string, speaker: string, at?: number) => {
+      appendSegment(text.trim(), speaker, at);
+      setInterim("");
+      setInterimSpeaker(null);
+    },
+    [appendSegment],
+  );
+
+  const ingestInterim = useCallback((text: string, speaker: string) => {
+    setInterim(text);
+    setInterimSpeaker(speaker || null);
+  }, []);
 
   useEffect(() => {
     return () => controllerRef.current?.stop();
   }, []);
 
-  const fullText = segments.map((s) => s.text).join("\n");
+  const fullText = formatTranscriptForAI(segments);
 
   return {
     supported,
     listening,
     segments,
     interim,
+    interimSpeaker,
     error,
+    currentSpeaker,
     fullText,
+    setCurrentSpeaker,
     start,
     stop,
     clear,
     addManual,
+    ingestSegment,
+    ingestInterim,
   };
 }

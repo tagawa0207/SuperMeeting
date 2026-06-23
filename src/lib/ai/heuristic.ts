@@ -38,9 +38,19 @@ const DECISION_HINTS = [
 
 const QUESTION_HINTS = ["?", "？", "どう", "どうする", "べき", "確認したい", "懸念", "課題"];
 
-function extractOwner(sentence: string): string | null {
-  // 「〇〇さんが」「〇〇さん担当」などの簡易抽出。
-  const m = sentence.match(/([一-龯ぁ-んァ-ヶA-Za-z]+)さん/);
+/** 「話者名: 発言」形式の行から話者名と本文を分離する。 */
+function parseSpeakerPrefix(line: string): { speaker: string | null; text: string } {
+  const m = line.match(/^\s*([^:：\n]{1,20})[:：]\s*(.+)$/s);
+  if (m) return { speaker: m[1].trim(), text: m[2].trim() };
+  return { speaker: null, text: line };
+}
+
+function extractOwner(line: string): string | null {
+  // まず行頭の話者名（発言者）を担当候補にする。
+  const { speaker, text } = parseSpeakerPrefix(line);
+  if (speaker && speaker !== "不明") return speaker;
+  // 次に本文中の「〇〇さん」を拾う。
+  const m = text.match(/([一-龯ぁ-んァ-ヶA-Za-z]+)さん/);
   return m ? `${m[1]}さん` : null;
 }
 
@@ -52,7 +62,12 @@ export function analyzeHeuristic(transcript: string): MeetingAnalysis {
   const todos: Todo[] = all
     .filter((s) => TODO_HINTS.some((h) => s.toLowerCase().includes(h)))
     .slice(0, 12)
-    .map((s) => ({ task: s, owner: extractOwner(s), due: null }));
+    .map((s) => ({
+      // task は本文のみ（行頭の話者名は owner に回す）。
+      task: parseSpeakerPrefix(s).text,
+      owner: extractOwner(s),
+      due: null,
+    }));
 
   const questions = all
     .filter((s) => QUESTION_HINTS.some((h) => s.includes(h)))
