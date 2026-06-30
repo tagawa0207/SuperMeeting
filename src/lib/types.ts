@@ -56,3 +56,29 @@ export interface MeetingAnalysis {
 export interface AnalyzeRequest {
   transcript: string;
 }
+
+/** 調査結果の 1 件の根拠（Web または社内情報源）。 */
+export interface ResearchSource {
+  title: string;
+  url: string;
+  snippet?: string;
+  /** 情報の出所。web=Web検索 / internal=社内情報源。 */
+  origin: "web" | "internal";
+}
+
+/** 調査（論点・問いの裏取り）の結果。 */
+export interface ResearchResult {
+  query: string;
+  /** 調査の要約（日本語）。 */
+  summary: string;
+  sources: ResearchSource[];
+  /** Web 調査を生成したエンジン。 */
+  engine: "claude" | "mock";
+  /** 社内検索に関する注記（モックである旨など）。 */
+  internalNote?: string;
+}
+
+/** /api/research のリクエストボディ。 */
+export interface ResearchRequest {
+  query: string;
+}

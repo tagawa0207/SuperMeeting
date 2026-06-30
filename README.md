@@ -16,7 +16,10 @@ Google Meet などのオンライン会議で、**リアルタイムに議事ノ
 - 📌 **TODO の抽出** — 担当者・期限を読み取れる範囲で付与。
 - ❓ **未解決の問いの可視化**
 - 🗺️ **議論の図示** — Mermaid 図でリアルタイムに構造化。
-- 🖥️ **画面共有前提のレイアウト** — 左に書き起こし、右に整理結果ボード。
+- 🔎 **調査・社内情報検索** — 論点・未解決の問いの「🔎」や自由入力から調査。
+  Web 調査は Claude の `web_search` ツールで根拠リンク付きに（要 API キー）。
+  社内情報検索は差し替え可能なプロバイダ設計＋モック（Drive/Slack/Confluence 等の実コネクタを後付け可能）。
+- 🖥️ **画面共有前提のレイアウト** — 左に書き起こし、右に整理結果ボード＋調査パネル。
 
 「✨ いま整理する」で即時分析、「自動更新」で 15 秒ごとに自動分析します。
 マイクが使えない環境でも「サンプル投入」や手入力で動作確認できます。
@@ -54,12 +57,14 @@ src/                         （Web アプリ）
   app/
     page.tsx                 画面全体（コントロール + 話者バー + 2カラム）
     api/analyze/route.ts     分析 API（POST /api/analyze）
+    api/research/route.ts    調査 API（POST /api/research）
   hooks/
     useTranscription.ts      音声認識・話者付与・外部発話の取り込み
     useAnalysis.ts           分析の実行 / 自動更新
     useExtensionBridge.ts    Chrome 拡張からの話者付き発話を購読
+    useResearch.ts           調査の実行
   lib/
-    types.ts                 ドメイン型（書き起こし・分析結果）
+    types.ts                 ドメイン型（書き起こし・分析結果・調査）
     speakers.ts              話者の色割り当て
     transcript.ts            話者ラベル付き整形（AI 入力）
     bridge.ts                拡張との postMessage プロトコル
@@ -69,7 +74,11 @@ src/                         （Web アプリ）
       claude.ts              Claude 呼び出し（structured outputs）
       heuristic.ts           ルールベース・フォールバック
       prompt.ts              プロンプト + JSON スキーマ
-  components/                表示部品（ボード・各パネル・話者バー・Mermaid 描画）
+    research/
+      research.ts            調査のオーケストレーション（Web + 社内）
+      web.ts                 Claude web_search による Web 調査
+      internal.ts            社内情報源の抽象 + モック（実コネクタ差し替え可）
+  components/                表示部品（ボード・各パネル・話者バー・調査・Mermaid 描画）
 
 extension/                   （Chrome 拡張: 話者分離）
   manifest.json
@@ -83,7 +92,7 @@ STT も AI も差し替えやすいよう層を分けています（例: Whisper
 ## 今後の拡張余地
 
 - 高精度なクラウド音声認識（Whisper 等）／ Meet Media API による堅牢な話者分離
-- 調査・社内情報検索（Web 検索ツール、社内ドキュメント／Slack／Drive 連携）
-- 分析結果のストリーミング表示・差分更新
+- 社内情報検索の実コネクタ（Slack / Drive / Confluence / Jira / Box の OAuth 連携）
+- 分析結果・調査のストリーミング表示・差分更新
 - 議事録のエクスポート（Markdown / Notion / Slack 投稿）
 ```

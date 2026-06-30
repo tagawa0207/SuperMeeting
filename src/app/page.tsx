@@ -4,8 +4,10 @@ import { useMemo, useState } from "react";
 import { useTranscription } from "@/hooks/useTranscription";
 import { useAnalysis } from "@/hooks/useAnalysis";
 import { useExtensionBridge } from "@/hooks/useExtensionBridge";
+import { useResearch } from "@/hooks/useResearch";
 import { TranscriptPanel } from "@/components/TranscriptPanel";
 import { AnalysisBoard } from "@/components/AnalysisBoard";
+import { ResearchPanel } from "@/components/ResearchPanel";
 import { SpeakerBar } from "@/components/SpeakerBar";
 import { knownSpeakers } from "@/lib/transcript";
 
@@ -28,6 +30,7 @@ export default function Home() {
   const [autoAnalyze, setAutoAnalyze] = useState(false);
   const [manualParticipants, setManualParticipants] = useState<string[]>([]);
   const analysis = useAnalysis(t.fullText, autoAnalyze ? AUTO_INTERVAL_MS : 0);
+  const research = useResearch();
 
   // Chrome 拡張からの話者付き発話を取り込む。
   const bridge = useExtensionBridge({
@@ -181,8 +184,18 @@ export default function Home() {
             onAddManual={t.addManual}
           />
         </div>
-        <div className="overflow-y-auto">
-          <AnalysisBoard analysis={analysis.analysis} />
+        <div className="space-y-4 overflow-y-auto">
+          <AnalysisBoard
+            analysis={analysis.analysis}
+            onResearch={research.run}
+          />
+          <ResearchPanel
+            result={research.result}
+            loading={research.loading}
+            error={research.error}
+            activeQuery={research.activeQuery}
+            onRun={research.run}
+          />
         </div>
       </div>
     </main>

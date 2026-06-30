@@ -20,10 +20,32 @@ function Empty({ text }: { text: string }) {
   return <p className="text-sm text-slate-500">{text}</p>;
 }
 
+/** 論点・問いを調査するための小さなボタン。 */
+function ResearchButton({
+  query,
+  onResearch,
+}: {
+  query: string;
+  onResearch?: (q: string) => void;
+}) {
+  if (!onResearch) return null;
+  return (
+    <button
+      onClick={() => onResearch(query)}
+      title="この内容を調査する"
+      className="ml-auto shrink-0 rounded px-1.5 py-0.5 text-xs text-slate-400 transition hover:bg-slate-700 hover:text-sky-300"
+    >
+      🔎
+    </button>
+  );
+}
+
 export function AnalysisBoard({
   analysis,
+  onResearch,
 }: {
   analysis: MeetingAnalysis | null;
+  onResearch?: (query: string) => void;
 }) {
   if (!analysis) {
     return (
@@ -62,6 +84,7 @@ export function AnalysisBoard({
                   <span className="text-sm font-medium text-slate-100">
                     {topic.title}
                   </span>
+                  <ResearchButton query={topic.title} onResearch={onResearch} />
                 </div>
                 {topic.points.length > 0 && (
                   <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-300">
@@ -129,9 +152,10 @@ export function AnalysisBoard({
         ) : (
           <ul className="space-y-1.5 text-sm text-slate-200">
             {analysis.questions.map((q, i) => (
-              <li key={i} className="flex gap-2">
+              <li key={i} className="flex items-start gap-2">
                 <span className="text-amber-400">?</span>
                 <span>{q}</span>
+                <ResearchButton query={q} onResearch={onResearch} />
               </li>
             ))}
           </ul>
