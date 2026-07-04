@@ -33,11 +33,15 @@ export function useAnalysis(
     inFlight.current = true;
     setAnalyzing(true);
     setError(null);
+    // 応答が返らない場合に UI が固まったままにならないようタイムアウトを付ける。
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 90_000);
     try {
       const res = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ transcript: trimmed }),
+        signal: controller.signal,
       });
       if (!res.ok) {
         const data = (await res.json().catch(() => ({}))) as { error?: string };
@@ -48,8 +52,13 @@ export function useAnalysis(
       setLastAnalyzedAt(Date.now());
       lastTextRef.current = trimmed;
     } catch (err) {
-      setError(err instanceof Error ? err.message : "分析に失敗しました");
+      if (err instanceof DOMException && err.name === "AbortError") {
+        setError("分析がタイムアウトしました。もう一度お試しください。");
+      } else {
+        setError(err instanceof Error ? err.message : "分析に失敗しました");
+      }
     } finally {
+      clearTimeout(timer);
       inFlight.current = false;
       setAnalyzing(false);
     }

@@ -67,6 +67,17 @@ export default function Home() {
           </span>
         </div>
 
+        <select
+          value={t.lang}
+          onChange={(e) => t.setLang(e.target.value)}
+          disabled={t.listening}
+          title="音声認識の言語"
+          className="rounded-lg border border-slate-600 bg-slate-900 px-2 py-2 text-sm text-slate-200 disabled:opacity-40"
+        >
+          <option value="ja-JP">🇯🇵 日本語</option>
+          <option value="en-US">🇺🇸 English</option>
+        </select>
+
         {t.listening ? (
           <button
             onClick={t.stop}

@@ -20,8 +20,11 @@ export interface UseTranscription {
   error: string | null;
   /** 手動モードでの現在の話者。null なら未指定。 */
   currentSpeaker: string | null;
+  /** 認識言語（例: ja-JP / en-US）。 */
+  lang: string;
   /** 話者ラベル付きの全文（AI 分析の入力）。 */
   fullText: string;
+  setLang: (lang: string) => void;
   setCurrentSpeaker: (name: string | null) => void;
   start: () => void;
   stop: () => void;
@@ -42,10 +45,13 @@ export function useTranscription(): UseTranscription {
   const [interimSpeaker, setInterimSpeaker] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [currentSpeaker, setCurrentSpeaker] = useState<string | null>(null);
+  const [lang, setLang] = useState("ja-JP");
   const controllerRef = useRef<SpeechController | null>(null);
-  // 最新の currentSpeaker を音声認識コールバックから参照するための ref。
+  // 最新の値を音声認識コールバック / start から参照するための ref。
   const currentSpeakerRef = useRef<string | null>(null);
   currentSpeakerRef.current = currentSpeaker;
+  const langRef = useRef(lang);
+  langRef.current = lang;
 
   useEffect(() => {
     setSupported(isSpeechRecognitionSupported());
@@ -77,7 +83,7 @@ export function useTranscription(): UseTranscription {
       onInterim: (text) => setInterim(text),
       onError: (message) => setError(message),
       onEnd: () => setListening(false),
-    });
+    }, langRef.current);
     controllerRef.current = controller;
     controller.start();
     setListening(true);
@@ -129,7 +135,9 @@ export function useTranscription(): UseTranscription {
     interimSpeaker,
     error,
     currentSpeaker,
+    lang,
     fullText,
+    setLang,
     setCurrentSpeaker,
     start,
     stop,
