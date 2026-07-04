@@ -84,7 +84,9 @@ extension/                   Chrome 拡張（MV3・ビルド不要）: 話者分
 - 議事録エクスポート（Markdown / Slack 投稿 / Notion）
 - 社内検索の実コネクタ（Slack / Drive / Confluence / Jira / Box の OAuth 連携。現状 `internal.ts` はモック）
 - 高精度クラウド STT（Whisper 等）、同時発話への耐性
-- Meet 拡張の自動話者検出セレクタを実 Meet で調整（`extension/src/meet/content.js` の `SELECTORS`）
+- Meet 拡張の自動話者検出セレクタの追従（`extension/src/meet/content.js` の `SELECTORS`）。
+  2026-07 時点の実 Meet DOM に合わせ済み（名前 `span.notranslate` / 発言判定は `audioBars` の
+  class 変化）。Meet 更新で難読クラスが変わったら DevTools で再特定して更新する。
 - 分析・調査のストリーミング表示 / 差分更新
 
 ## Git

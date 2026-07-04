@@ -47,9 +47,17 @@ Meet の DOM は難読化されており、バージョンで変わります。�
 
 - **手動固定（確実な回避策）** … オーバーレイの参加者ボタンをクリックすると、その人に
   話者を固定できます。「自動」を押すと自動検出に戻ります。
-- **セレクタ調整** … `src/meet/content.js` 冒頭の `SELECTORS` を調整します。
-  発言中のタイルを右クリック →「検証」で、発言中に現れる要素の class を
-  `SELECTORS.speaking` に、名前要素の class を `SELECTORS.name` に追記してください。
+- **セレクタ調整** … `src/meet/content.js` 冒頭の `SELECTORS` を現行 Meet の DOM に合わせます。
+  - `name`: 参加者名の要素。Meet は名前を翻訳除けの `span.notranslate` に入れます
+    （アイコンは `<i class="… notranslate">` なので `span` に限定しています）。
+  - `audioBars`: 音声レベルの棒グラフ（既定 `.DYfzY, .IisKdb`）。発言判定はこの要素の
+    **class が前回ポーリングから変化したか**（＝アニメ中か）で行います。単なる存在では
+    判定しないため、無音のタイルを誤検出しません。
+
+  Meet はクラス名を難読化し更新で変えるため、外れたら実データから特定するのが確実です。
+  Meet タブの DevTools コンソールで、参加者タイル（`[data-participant-id]`）配下の
+  「発言中に頻繁に class が変化する要素」を観測すれば、新しい `audioBars` / `name` を
+  特定できます。
 
 ## 制限・今後
 
