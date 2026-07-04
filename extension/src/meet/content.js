@@ -16,14 +16,13 @@
   const SELECTORS = {
     // 参加者タイル。data-participant-id は比較的安定している。
     tile: "[data-participant-id]",
-    // タイル内の参加者名の候補。先頭から順に試す。
-    name: ["[data-self-name]", '[class*="name"]', "[data-tooltip]"],
-    // 「発言中」を示す要素の候補。Meet が話者に付けるアニメ表示など。
-    // 環境に合わせて、発言中タイル内の要素を Inspect して class を追記する。
-    speaking: [
-      ".IisKdb", // 音声レベルのインジケータ（変更されうる）
-      '[class*="speaking"]',
-    ],
+    // 参加者名の候補。Meet は名前を翻訳除けの notranslate span に入れる。
+    // （アイコンは <i class="... notranslate"> なので、span に限定して拾う）
+    name: ["span.notranslate", "[data-self-name]", "[data-tooltip]"],
+    // 音声レベルの棒グラフ。喋ると高さクラス（HX2H7 / OgVli / gjg47c …）が
+    // 目まぐるしく入れ替わる。入れ物は .IisKdb。
+    // 「発言中か」は要素の“存在”ではなく“クラスが変化しているか”で判定する。
+    audioBars: ".DYfzY, .IisKdb",
   };
   const UNKNOWN = "不明";
   const POLL_MS = 400;
@@ -52,32 +51,40 @@
     for (const sel of SELECTORS.name) {
       const el = tile.querySelector(sel);
       const text = el && (el.getAttribute("data-self-name") || el.textContent);
-      if (text && text.trim()) return text.trim().split("\n")[0].slice(0, 30);
+      if (text && text.trim()) return text.trim().split("\n")[0].slice(0, 40);
     }
     const aria = tile.getAttribute("aria-label");
-    if (aria && aria.trim()) return aria.trim().slice(0, 30);
-    const text = (tile.textContent || "").trim();
-    return text ? text.split("\n")[0].slice(0, 30) : null;
+    if (aria && aria.trim()) return aria.trim().split("\n")[0].slice(0, 40);
+    // タイルの全テキストはアイコンのリガチャ（frame_person 等）を含み
+    // 誤検出の元なので、名前が取れなければ null（＝不明）とする。
+    return null;
   }
 
-  function isSpeaking(tile) {
-    for (const sel of SELECTORS.speaking) {
-      const el = tile.querySelector(sel);
-      // 要素が存在し、表示されていれば発言中とみなす（best-effort）。
-      if (el && el.offsetParent !== null) return true;
-    }
-    return false;
+  // 音声棒グラフの現在状態を文字列化する。喋っている間はポーリング毎に変わる。
+  const lastSig = new Map(); // participant-id -> 直近の signature
+  function audioSignature(tile) {
+    const bars = tile.querySelectorAll(SELECTORS.audioBars);
+    if (!bars.length) return "";
+    let sig = "";
+    for (const b of bars) sig += b.className + "|";
+    return sig;
   }
 
+  // 前回ポーリングから棒グラフのクラスが変化したタイル = 発言中。
+  // 要素の“存在”ではなく“変化”を見るので、無音のタイルは拾わない。
   function detectActiveSpeaker() {
-    const tiles = getTiles();
-    for (const tile of tiles) {
-      if (isSpeaking(tile)) {
+    let speaker = null;
+    for (const tile of getTiles()) {
+      const id = tile.getAttribute("data-participant-id") || "";
+      const sig = audioSignature(tile);
+      const prev = lastSig.get(id);
+      lastSig.set(id, sig);
+      if (sig && prev !== undefined && sig !== prev) {
         const name = getName(tile);
-        if (name) return name;
+        if (name) speaker = name;
       }
     }
-    return null;
+    return speaker;
   }
 
   function participantNames() {
@@ -296,7 +303,11 @@
     buildOverlay();
     renderOverlay();
     setInterval(() => {
-      state.detected = detectActiveSpeaker();
+      // 発言を検出したら更新。無音の合間は直近の話者を保持する。
+      // （音声認識の確定テキストは発話“終了後”に届くため、保持しないと
+      //   ちょうど発話が途切れた瞬間に「不明」へ取りこぼしてしまう）
+      const active = detectActiveSpeaker();
+      if (active) state.detected = active;
       renderOverlay();
     }, POLL_MS);
   }
