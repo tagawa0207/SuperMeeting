@@ -41,7 +41,7 @@ Google Meet などのオンライン会議で、**リアルタイムに議事ノ
 | 決定事項 / TODO | 決定事項の抽出、TODO は担当者を可能な範囲で自動付与 |
 | 図示 | Mermaid flowchart で議論構造を描画 |
 | 調査 | Claude の web_search による Web 調査（要 APIキー、未設定はモック）。結果は調査フィードに ResearchCard として新着順に積まれる（上限 20 枚、古いカードは折りたたみ） |
-| 社内情報検索 | プロバイダ抽象 + モック（実コネクタは未実装）。Web と束ねず独立カードとして非同期到着（/api/research の target で片方のみ実行） |
+| 社内情報検索 | プロバイダ抽象 + Slack コネクタ実装済み（`SLACK_USER_TOKEN` で有効化、未設定時はモック）。search.messages ＋ public チャンネル限定フィルタ（`SLACK_INCLUDE_PRIVATE=1` で解除可）、メッセージ内 URL を最大 2 件サブソース展開。Web と束ねず独立カードとして非同期到着（/api/research の target で片方のみ実行） |
 | エンジン | APIキーがあれば Claude、無ければルールベース/モックに自動フォールバック |
 
 ---
@@ -142,7 +142,7 @@ ResearchCard {
 | フェーズ | 内容 | 検証方法 |
 |---|---|---|
 | ①✅ | `runResearch` 束ね解体 ＋ フィードパネル基盤（2026-07-05 済） | 既存の手動調査で web/internal カードが個別・非同期に出る |
-| ② | `SlackKnowledgeSource` 実装 | 手動調査で実 Slack ヒットが出る（public-only） |
+| ②✅ | `SlackKnowledgeSource` 実装（2026-07-05 済） | 手動調査で実 Slack ヒットが出る（public-only）。フィルタは `src/lib/research/slack.filter.test.ts`（`node --test`）で担保 |
 | ③ | 高速トリガーレーン（/api/trigger ＋ ガード） | 発話から数秒で自動カードが出る。重複暴発しない |
 
 ---

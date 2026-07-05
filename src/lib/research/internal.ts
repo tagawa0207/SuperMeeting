@@ -1,8 +1,9 @@
 // 社内情報検索のプロバイダ抽象。
 // 実コネクタ（Slack / Google Drive / Confluence / Jira / Box 等）は、
 // それぞれの OAuth・API を使ってこの InternalKnowledgeSource を実装して差し込む。
-// 現状は UI とデータフロー確認用のモックを提供する。
+// 実装済み: Slack（./slack.ts、SLACK_USER_TOKEN で有効化）。未設定時はモック。
 import type { ResearchSource } from "@/lib/types";
+import { slackInternalSource } from "./slack";
 
 export interface InternalKnowledgeSource {
   /** 表示名。 */
@@ -38,8 +39,9 @@ export const mockInternalSource: InternalKnowledgeSource = {
 
 /**
  * 環境に応じて使う社内情報源を選ぶ。
- * 将来: 環境変数や設定に応じて実コネクタ（複数）を束ねた実装を返す。
+ * 将来: 複数の実コネクタ（Confluence / Drive 等）を束ねた実装を返す。
  */
 export function getInternalSource(): InternalKnowledgeSource {
+  if (process.env.SLACK_USER_TOKEN) return slackInternalSource;
   return mockInternalSource;
 }
