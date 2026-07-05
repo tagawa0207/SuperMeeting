@@ -108,3 +108,33 @@ export interface ResearchRequest {
   query: string;
   target: ResearchTarget;
 }
+
+/** 自動トリガーの検索対象。both は web / internal の 2 枚のカードになる。 */
+export type TriggerTarget = ResearchTarget | "both";
+
+/** /api/trigger のリクエストボディ。直近発話のウィンドウと文脈を渡す。 */
+export interface TriggerRequest {
+  /** 直近 6〜10 発話のスライディングウィンドウ。 */
+  segments: { id: string; speaker?: string; text: string }[];
+  /** 最新分析の論点要約（あれば）。 */
+  topicsSummary?: string;
+  /** 実行済みクエリの一覧（重複検索の抑制に使う）。 */
+  recentQueries: string[];
+}
+
+/** トリガー判定が生成した検索タスク 1 件。 */
+export interface TriggerTask {
+  /** 何を明らかにしたいか（Web 検索用の自然文）。 */
+  intent: string;
+  /** Slack 検索用の短いキーワード列（2〜4語。in:/after: 修飾子可）。 */
+  slackKeywords: string;
+  target: TriggerTarget;
+  /** 発端となった発言の引用。 */
+  triggeredBy: string;
+}
+
+/** /api/trigger のレスポンス。 */
+export interface TriggerResult {
+  shouldSearch: boolean;
+  tasks: TriggerTask[];
+}

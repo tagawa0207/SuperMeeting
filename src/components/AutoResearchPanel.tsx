@@ -138,9 +138,14 @@ function Card({
 export function AutoResearchPanel({
   cards,
   onRun,
+  autoEnabled,
+  onToggleAuto,
 }: {
   cards: ResearchCard[];
   onRun: (query: string) => void;
+  /** 自動検索の ON/OFF（既定 OFF。会議内容が外部の Web 検索に送られるため明示的に ON にする）。 */
+  autoEnabled: boolean;
+  onToggleAuto: (enabled: boolean) => void;
 }) {
   const [draft, setDraft] = useState("");
 
@@ -152,6 +157,18 @@ export function AutoResearchPanel({
 
   return (
     <Panel title="調査・社内情報検索" icon="🔎" count={cards.length}>
+      <label className="mb-2 flex flex-wrap items-center gap-2 text-sm text-slate-300">
+        <input
+          type="checkbox"
+          checked={autoEnabled}
+          onChange={(e) => onToggleAuto(e.target.checked)}
+          className="h-4 w-4 accent-sky-500"
+        />
+        発話に反応して自動検索
+        <span className="text-xs text-slate-500">
+          （ON にすると発話内容の一部が外部の Web 検索に送信されます）
+        </span>
+      </label>
       <div className="mb-3 flex gap-2">
         <input
           value={draft}

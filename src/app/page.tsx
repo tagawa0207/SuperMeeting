@@ -5,6 +5,7 @@ import { useTranscription } from "@/hooks/useTranscription";
 import { useAnalysis } from "@/hooks/useAnalysis";
 import { useExtensionBridge } from "@/hooks/useExtensionBridge";
 import { useResearchFeed } from "@/hooks/useResearchFeed";
+import { useAutoResearch } from "@/hooks/useAutoResearch";
 import { TranscriptPanel } from "@/components/TranscriptPanel";
 import { AnalysisBoard } from "@/components/AnalysisBoard";
 import { AutoResearchPanel } from "@/components/AutoResearchPanel";
@@ -28,9 +29,23 @@ const AUTO_INTERVAL_MS = 15000;
 export default function Home() {
   const t = useTranscription();
   const [autoAnalyze, setAutoAnalyze] = useState(false);
+  // 自動検索は既定 OFF（発話内容が外部の Web 検索に送られるため、明示的に ON にする設計）。
+  const [autoResearch, setAutoResearch] = useState(false);
   const [manualParticipants, setManualParticipants] = useState<string[]>([]);
   const analysis = useAnalysis(t.fullText, autoAnalyze ? AUTO_INTERVAL_MS : 0);
   const research = useResearchFeed();
+
+  // 発話確定に反応する自動リサーチ（高速トリガーレーン）。
+  const topicsSummary = useMemo(() => {
+    const titles = analysis.analysis?.topics.map((tp) => tp.title) ?? [];
+    return titles.length > 0 ? titles.join(" / ") : undefined;
+  }, [analysis.analysis]);
+  useAutoResearch({
+    segments: t.segments,
+    topicsSummary,
+    enabled: autoResearch,
+    runAuto: research.runAuto,
+  });
 
   // Chrome 拡張からの話者付き発話を取り込む。
   const bridge = useExtensionBridge({
@@ -200,7 +215,12 @@ export default function Home() {
             analysis={analysis.analysis}
             onResearch={research.runManual}
           />
-          <AutoResearchPanel cards={research.cards} onRun={research.runManual} />
+          <AutoResearchPanel
+            cards={research.cards}
+            onRun={research.runManual}
+            autoEnabled={autoResearch}
+            onToggleAuto={setAutoResearch}
+          />
         </div>
       </div>
     </main>

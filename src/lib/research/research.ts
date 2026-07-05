@@ -28,15 +28,20 @@ export async function runWebResearch(query: string): Promise<ResearchResult> {
   };
 }
 
-/** 社内情報検索のみを実行する（現状モック）。 */
+/** 社内情報検索のみを実行する。 */
 export async function runInternalResearch(
   query: string,
 ): Promise<ResearchResult> {
   const internalSource = getInternalSource();
   const sources = await internalSource.search(query);
+  // 0 件のとき無言だと「検索したが該当なし」がカード上で分からないため明示する。
+  const summary =
+    sources.length === 0 && internalSource.name === "slack"
+      ? "Slack に該当するメッセージは見つかりませんでした（public チャンネルのみ検索）。"
+      : "";
   return {
     query,
-    summary: "",
+    summary,
     sources,
     engine: "mock",
     internalNote:
