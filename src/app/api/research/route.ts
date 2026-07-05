@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { ResearchRequest } from "@/lib/types";
-import { runResearch } from "@/lib/research/research";
+import { runInternalResearch, runWebResearch } from "@/lib/research/research";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -19,9 +19,18 @@ export async function POST(request: Request) {
   if (!query) {
     return NextResponse.json({ error: "調査クエリが空です" }, { status: 400 });
   }
+  if (body.target !== "web" && body.target !== "internal") {
+    return NextResponse.json(
+      { error: "target には web または internal を指定してください" },
+      { status: 400 },
+    );
+  }
 
   try {
-    const result = await runResearch(query);
+    const result =
+      body.target === "web"
+        ? await runWebResearch(query)
+        : await runInternalResearch(query);
     return NextResponse.json(result);
   } catch (err) {
     console.error("調査に失敗:", err);

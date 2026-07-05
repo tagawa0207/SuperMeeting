@@ -49,7 +49,7 @@ export function AnalysisBoard({
 }) {
   if (!analysis) {
     return (
-      <div className="grid h-full place-items-center rounded-xl border border-dashed border-slate-700 bg-slate-800/20 p-8 text-center text-slate-500">
+      <div className="grid min-h-[200px] place-items-center rounded-xl border border-dashed border-slate-700 bg-slate-800/20 p-8 text-center text-slate-500">
         <div>
           <p className="text-lg">まだ分析結果がありません。</p>
           <p className="mt-1 text-sm">

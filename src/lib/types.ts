@@ -57,13 +57,38 @@ export interface AnalyzeRequest {
   transcript: string;
 }
 
+/** 調査の対象。web=Web検索 / internal=社内情報源。 */
+export type ResearchTarget = "web" | "internal";
+
 /** 調査結果の 1 件の根拠（Web または社内情報源）。 */
 export interface ResearchSource {
   title: string;
   url: string;
   snippet?: string;
   /** 情報の出所。web=Web検索 / internal=社内情報源。 */
-  origin: "web" | "internal";
+  origin: ResearchTarget;
+}
+
+/**
+ * 調査フィードの 1 カード。
+ * target（web/internal）ごとに独立して非同期に到着する（束ねない）。
+ */
+export interface ResearchCard {
+  id: string;
+  /** 調査クエリ（Web 用の自然文）。 */
+  query: string;
+  /** Slack 検索用のキーワード列（自動トリガー時に付与。フェーズ③）。 */
+  slackKeywords?: string;
+  target: ResearchTarget;
+  status: "queued" | "searching" | "done" | "error";
+  trigger: "auto" | "manual";
+  /** 発端となった発言（自動トリガー時のみ）。 */
+  triggeredBy?: { segmentId: string; quote: string };
+  /** カード生成時刻（ミリ秒）。 */
+  at: number;
+  /** 調査の要約。status=error の場合はエラーメッセージ。 */
+  summary?: string;
+  sources: ResearchSource[];
 }
 
 /** 調査（論点・問いの裏取り）の結果。 */
@@ -78,7 +103,8 @@ export interface ResearchResult {
   internalNote?: string;
 }
 
-/** /api/research のリクエストボディ。 */
+/** /api/research のリクエストボディ。target で片方のみを実行する。 */
 export interface ResearchRequest {
   query: string;
+  target: ResearchTarget;
 }
