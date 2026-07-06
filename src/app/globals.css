@@ -1,7 +1,77 @@
 @import "tailwindcss";
 
+@theme {
+  --font-sans:
+    "Helvetica Neue", Helvetica, "Hiragino Kaku Gothic ProN", "Noto Sans JP",
+    Meiryo, sans-serif;
+
+  /* デザイントークン（docs/design_handoff_ui_redesign/README.md） */
+  --color-paper: #f5f4f1;
+  --color-soft: #fbfaf7;
+  --color-softer: #f0efea;
+  --color-line: #e6e4df;
+  --color-line-soft: #eceae4;
+  --color-line-dash: #d6d2c9;
+  --color-ink: #1b1a18;
+  --color-ink-2: #565248;
+  --color-ink-3: #6b675f;
+  --color-ink-4: #a6a199;
+  --color-ink-5: #c4c0b7;
+  --color-accent: #3a55c4;
+  --color-accent-deep: #2b3e9c;
+  --color-accent-soft: #edf0fb;
+  --color-accent-line: #d9dff6;
+  --color-green: #1e8a5c;
+  --color-green-soft: #e9f5ef;
+  --color-amber: #96690f;
+  --color-amber-soft: #fbf1dc;
+  --color-rec: #d2452f;
+  --color-err: #b33a3a;
+  --color-err-line: #f0d4d4;
+  --color-err-soft: #fdf7f7;
+  --color-dark: #1e1c19;
+  --color-dark-ink: #f3f1ec;
+  --color-dark-ink-2: #d8d5ce;
+  --color-dark-ink-3: #a6a199;
+  --color-dark-ink-4: #8a857c;
+
+  --animate-sm-pulse: sm-pulse 1.6s ease-in-out infinite;
+  --animate-sm-pulse-fast: sm-pulse 1.2s ease-in-out infinite;
+  --animate-sm-in: sm-in 0.35s ease;
+  --animate-sm-in-slow: sm-in 0.4s ease;
+  --animate-sm-drawer: sm-drawer 0.3s ease;
+
+  @keyframes sm-pulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.35;
+    }
+  }
+  @keyframes sm-in {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes sm-drawer {
+    from {
+      transform: translateY(100%);
+    }
+    to {
+      transform: none;
+    }
+  }
+}
+
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 html,
@@ -10,14 +80,7 @@ body {
 }
 
 body {
-  background-color: #0b1220;
-  color: #e5e7eb;
-  font-family:
-    system-ui,
-    -apple-system,
-    "Segoe UI",
-    "Hiragino Kaku Gothic ProN",
-    "Noto Sans JP",
-    Meiryo,
-    sans-serif;
+  background-color: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
 }

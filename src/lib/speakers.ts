@@ -1,25 +1,28 @@
-// 話者名から安定した色を割り当てる（書き起こし・分析表示で話者を識別しやすくする）。
+// 話者名から安定した色を割り当てる（初出順に固定パレットを循環）。
+// ライト面（カード・チップ）では light、ダーク面（テロップ・ドロワー）では dark を使う。
 
 const PALETTE = [
-  "#38bdf8", // sky
-  "#f472b6", // pink
-  "#a78bfa", // violet
-  "#34d399", // emerald
-  "#fbbf24", // amber
-  "#fb7185", // rose
-  "#22d3ee", // cyan
-  "#c084fc", // purple
-  "#4ade80", // green
-  "#f59e0b", // orange
+  { light: "#3A55C4", dark: "#7E96E8" },
+  { light: "#1E8A5C", dark: "#6FC9A0" },
+  { light: "#C08A2D", dark: "#E8BE71" },
+  { light: "#8E5BB8", dark: "#B48BD6" },
 ];
 
 export const UNKNOWN_SPEAKER = "不明";
 
-export function speakerColor(name?: string | null): string {
-  if (!name) return "#94a3b8"; // slate-400
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
+export type SpeakerTone = "light" | "dark";
+
+const assigned = new Map<string, number>();
+
+export function speakerColor(
+  name?: string | null,
+  tone: SpeakerTone = "light",
+): string {
+  if (!name) return tone === "light" ? "#A6A199" : "#8A857C";
+  let idx = assigned.get(name);
+  if (idx === undefined) {
+    idx = assigned.size % PALETTE.length;
+    assigned.set(name, idx);
   }
-  return PALETTE[hash % PALETTE.length];
+  return PALETTE[idx][tone];
 }

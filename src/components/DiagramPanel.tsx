@@ -29,7 +29,7 @@ export function DiagramPanel({ code }: { code: string }) {
         if (!mermaidInitialized) {
           mermaid.initialize({
             startOnLoad: false,
-            theme: "dark",
+            theme: "neutral",
             securityLevel: "strict",
           });
           mermaidInitialized = true;
@@ -55,15 +55,15 @@ export function DiagramPanel({ code }: { code: string }) {
 
   if (!code?.trim()) {
     return (
-      <p className="text-sm text-slate-500">まだ図にできる材料がありません。</p>
+      <p className="text-[13px] text-ink-4">まだ図にできる材料がありません。</p>
     );
   }
 
   if (error) {
     return (
-      <div className="text-sm text-amber-400">
+      <div className="text-[13px] text-amber">
         {error}
-        <pre className="mt-2 overflow-auto rounded bg-slate-900 p-2 text-xs text-slate-400">
+        <pre className="mt-2 overflow-auto rounded-lg border border-line-soft bg-soft p-2 text-xs text-ink-3">
           {code}
         </pre>
       </div>
