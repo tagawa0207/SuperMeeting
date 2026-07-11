@@ -41,7 +41,7 @@ Google Meet などのオンライン会議で、**リアルタイムに議事ノ
 | 決定事項 / TODO | 決定事項の抽出、TODO は担当者を可能な範囲で自動付与 |
 | 図示 | Mermaid flowchart で議論構造を描画 |
 | 調査 | Claude の web_search による Web 調査（要 APIキー、未設定はモック）。結果は調査フィードに ResearchCard として新着順に積まれる（上限 20 枚、古いカードは折りたたみ） |
-| 社内情報検索 | プロバイダ抽象 + Slack コネクタ実装済み（`SLACK_USER_TOKEN` で有効化、未設定時はモック）。search.messages ＋ public チャンネル限定フィルタ（`SLACK_INCLUDE_PRIVATE=1` で解除可）、メッセージ内 URL を最大 2 件サブソース展開。Web と束ねず独立カードとして非同期到着（/api/research の target で片方のみ実行） |
+| 社内情報検索 | プロバイダ抽象 + 実コネクタ 2 つ（有効なものを並列実行して 1 枚の internal カードに束ねる。どちらも未設定時はモック）。**Slack**: search.messages ＋ public チャンネル限定フィルタ（`SLACK_INCLUDE_PRIVATE=1` で解除可）、メッセージ内 URL を最大 2 件サブソース展開。**Confluence**: Cloud REST API の CQL `siteSearch`（`CONFLUENCE_BASE_URL/EMAIL/API_TOKEN` で有効化、Basic 認証）、個人スペース除外（`CONFLUENCE_INCLUDE_PERSONAL=1` で解除可）、`slackKeywords` を共用し Slack 修飾子（in:/after: 等）は除去して検索。Web と束ねず独立カードとして非同期到着（/api/research の target で片方のみ実行） |
 | 自動リサーチ | 発話確定ごとに Haiku（`ANTHROPIC_TRIGGER_MODEL`、既定 `claude-haiku-4-5`）が検索要否を判定（`/api/trigger`）し、web/internal のカードを自動で積む。ガード 3 枚（in-flight バッファによる実質 2〜3 秒間隔の判定 / 実行済みクエリの正規化キャッシュによる重複抑制 / 3 並列上限・超過時は最古の実行中カードを Abort）。トグルは既定 OFF（発話が外部の Web 検索に送られるため明示 ON）。`ANTHROPIC_API_KEY` 未設定時は常に shouldSearch=false |
 | エンジン | APIキーがあれば Claude、無ければルールベース/モックに自動フォールバック |
 
@@ -159,7 +159,8 @@ ResearchCard {
 | 💡 | 検索結果の関連性フィルタ（表示前に Haiku で有用性判定、閾値未満は非表示ログのみ） | アテンション汚染対策。垂れ流しで品質を見てから導入判断 |
 | 💡 | 発言⇔検索カードの紐づけ可視化 | triggeredBy はデータモデルに保持済み（自動カードで格納中）。品質が磨けた後 |
 | 💡 | 自動検索クエリの固有名詞マスキング | 顧客同席会議で発言断片が外部送信される問題への備え。会議単位の ON/OFF トグル（既定 OFF）は実装済み。マスキングは社内展開時ほぼ必須 |
-| 💡 | 社内検索の追加コネクタ（Confluence / Jira / Drive / Box） | Atlassian は API トークン＋REST で認可が容易、次点候補 |
+| ✅ | 社内検索の追加コネクタ（Confluence） | →決定ログ 2026-07-11。実装済み `src/lib/research/confluence.ts` |
+| 💡 | 社内検索の追加コネクタ（Jira / Drive / Box） | Jira は Confluence と同じ Atlassian API トークンで認可可能、次点候補 |
 | 💡 | 議事録エクスポート（Markdown / Slack 投稿 / Notion） | 会議後の価値に直結。まず Markdown が最小 |
 | 💡 | 高精度クラウド STT（Whisper / Deepgram） | 日本語精度・同時発話耐性 |
 | 💡 | 分析・調査のストリーミング表示 / 差分更新 | 体感速度の改善 |
@@ -173,6 +174,9 @@ ResearchCard {
 
 > 形式: `YYYY-MM-DD 決定内容 — 理由`
 
+- 2026-07-11 Confluence コネクタは Cloud REST API（CQL `siteSearch`）＋ API トークンの Basic 認証 — OAuth 不要で認可が最も容易。個人スペースは既定で CQL 除外（Slack の public 限定と同じ画面共有事故防止）
+- 2026-07-11 複数の社内コネクタは並列実行して 1 枚の internal カードに束ねる — Slack / Confluence はどちらも 1 秒前後で、束ねてもレイテンシ目標（発話から 2〜3 秒）に収まる。コネクタごとのカード分割は遅いコネクタを足すときに再検討
+- 2026-07-11 トリガーの `slackKeywords` を社内検索共通のキーワードとして流用（改名しない） — Confluence の siteSearch も同じキーワードマッチ。Slack 専用修飾子（in:/after: 等）は Confluence 側で除去
 - 2026-07-07 UI刷新: ライト×ミニマル(3a)テイスト採用 — デザインは docs/design_handoff_ui_redesign 参照
 - 2026-07-05 自動リサーチのトリガーは発話ごとの高速判定レーン（Haiku 別レーン） — 15 秒分析ループへの相乗り（案A）では最悪 15 秒＋分析時間の遅延。「発話から数秒でカード」の体験を優先し案Bを採用
 - 2026-07-05 web / internal の調査は束ねず origin ごとの独立カードとして非同期表示 — 最速の Slack 結果（1 秒弱）が最遅の Web 検索（5〜20 秒）に引きずられるため。`runResearch` の待ち合わせを解体

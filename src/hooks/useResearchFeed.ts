@@ -19,7 +19,7 @@ const MAX_AUTO_CONCURRENCY = 3;
 export interface AutoResearchTask {
   /** Web 検索用の自然文クエリ。 */
   intent: string;
-  /** Slack 検索用のキーワード列。 */
+  /** 社内検索（Slack / Confluence）用のキーワード列。 */
   slackKeywords: string;
   target: TriggerTarget;
   triggeredBy: { segmentId: string; quote: string };

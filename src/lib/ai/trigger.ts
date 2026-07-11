@@ -10,7 +10,7 @@ const TRIGGER_MODEL = process.env.ANTHROPIC_TRIGGER_MODEL || "claude-haiku-4-5";
 const MAX_TASKS = 2;
 
 const TRIGGER_SYSTEM_PROMPT = `あなたは会議のリアルタイム・リサーチアシスタントの「トリガー判定」担当です。
-直近の発話を読み、いま Web / 社内 Slack を検索する価値があるかを即座に判定します。
+直近の発話を読み、いま Web / 社内ナレッジ（Slack・Confluence）を検索する価値があるかを即座に判定します。
 検索結果は画面共有中の会議ボードに表示されるため、的外れな検索はノイズになります。
 
 判定の方針:
@@ -27,8 +27,8 @@ const TRIGGER_SYSTEM_PROMPT = `あなたは会議のリアルタイム・リサ�
 
 クエリの作り方（検索品質の要）:
 - intent: Web 検索用の自然文。何を明らかにしたいかが分かる一文にする。
-- slackKeywords: Slack 検索用の 2〜4 語のキーワード列（スペース区切り）。
-  Slack はキーワードマッチのため自然文では当たらない。固有名詞を優先し、必要なら in:チャンネル名 / after:日付 の修飾子を使ってよい。
+- slackKeywords: 社内検索（Slack・Confluence 共通）用の 2〜4 語のキーワード列（スペース区切り）。
+  社内検索はキーワードマッチのため自然文では当たらない。固有名詞を優先し、必要なら in:チャンネル名 / after:日付 の修飾子を使ってよい（修飾子は Slack のみに効き、Confluence 検索では自動除去される）。
 - target: Web の情報が有用なら "web"、社内の経緯・ナレッジが有用なら "internal"、両方なら "both"。
 - triggeredBy: 発端となった発言をそのまま引用する。`;
 
@@ -51,7 +51,7 @@ const TRIGGER_SCHEMA = {
           intent: { type: "string", description: "Web 検索用の自然文クエリ" },
           slackKeywords: {
             type: "string",
-            description: "Slack 検索用の 2〜4 語のキーワード列",
+            description: "社内検索（Slack・Confluence 共通）用の 2〜4 語のキーワード列",
           },
           target: { type: "string", enum: ["web", "internal", "both"] },
           triggeredBy: {

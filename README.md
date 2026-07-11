@@ -18,8 +18,8 @@ Google Meet などのオンライン会議で、**リアルタイムに議事ノ
 - 🗺️ **議論の図示** — Mermaid 図でリアルタイムに構造化。
 - 🔎 **調査・社内情報検索** — 論点・未解決の問いの「🔎」や自由入力から調査。
   Web 調査は Claude の `web_search` ツールで根拠リンク付きに（要 API キー）。
-  社内情報検索は差し替え可能なプロバイダ設計。Slack コネクタを実装済み（`SLACK_USER_TOKEN` で有効化、
-  未設定時はモック）。Drive/Confluence 等の実コネクタも後付け可能。
+  社内情報検索は差し替え可能なプロバイダ設計。Slack（`SLACK_USER_TOKEN`）と
+  Confluence（`CONFLUENCE_BASE_URL` 等）のコネクタを実装済み（未設定時はモック）。Drive/Jira 等も後付け可能。
 - 🖥️ **画面共有前提のレイアウト** — 左に書き起こし、右に整理結果ボード＋調査パネル。
 
 「✨ いま整理する」で即時分析、「自動更新」で 15 秒ごとに自動分析します。
@@ -55,6 +55,25 @@ npm run dev
 検索結果は**public チャンネル限定**です。個人トークンの検索には DM・プライベートチャンネルが
 混ざるため、画面共有中のボードに表示されないようサーバ側で除外しています
 （`SLACK_INCLUDE_PRIVATE=1` で解除できますが、画面共有前提のため非推奨）。
+
+## 社内情報検索（Confluence 連携）
+
+Atlassian の API トークンを設定すると、社内情報検索に Confluence（Cloud）の
+ページ・ブログ記事の検索（CQL `siteSearch`）が加わります。Slack と併用でき、
+両方の結果が 1 枚の社内カードに束ねられます。
+
+1. [Atlassian アカウント設定](https://id.atlassian.com/manage-profile/security/api-tokens) で「API トークンを作成」
+2. `.env.local` に以下の 3 つを設定して dev サーバを再起動
+
+```bash
+CONFLUENCE_BASE_URL=https://your-company.atlassian.net/wiki
+CONFLUENCE_EMAIL=you@example.com        # Atlassian アカウントのメールアドレス
+CONFLUENCE_API_TOKEN=...                # 1. で作成したトークン
+```
+
+検索結果は**一般（global）スペース限定**です。個人トークンの検索には自分の個人スペース
+（下書き・私的メモ）が混ざるため、画面共有中のボードに表示されないよう CQL で除外しています
+（`CONFLUENCE_INCLUDE_PERSONAL=1` で解除できますが、画面共有前提のため非推奨）。
 
 ## 話者分離（Chrome 拡張）
 
@@ -95,6 +114,7 @@ src/                         （Web アプリ）
       web.ts                 Claude web_search による Web 調査
       internal.ts            社内情報源の抽象 + モック（実コネクタ差し替え可）
       slack.ts               Slack コネクタ（search.messages、public チャンネル限定）
+      confluence.ts          Confluence コネクタ（CQL siteSearch、一般スペース限定）
   components/                表示部品（ボード・各パネル・話者バー・調査・Mermaid 描画）
 
 extension/                   （Chrome 拡張: 話者分離）
@@ -109,7 +129,7 @@ STT も AI も差し替えやすいよう層を分けています（例: Whisper
 ## 今後の拡張余地
 
 - 高精度なクラウド音声認識（Whisper 等）／ Meet Media API による堅牢な話者分離
-- 社内情報検索の追加コネクタ（Drive / Confluence / Jira / Box の OAuth 連携。Slack は実装済み）
+- 社内情報検索の追加コネクタ（Drive / Jira / Box。Slack / Confluence は実装済み）
 - 分析結果・調査のストリーミング表示・差分更新
 - 議事録のエクスポート（Markdown / Notion / Slack 投稿）
 ```

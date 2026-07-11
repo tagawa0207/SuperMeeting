@@ -46,7 +46,7 @@ function Switch({ on }: { on: boolean }) {
   );
 }
 
-/** 右カラム。発話に反応した Web / 社内(Slack) 調査カードのフィード（新着が上）。 */
+/** 右カラム。発話に反応した Web / 社内(Slack・Confluence) 調査カードのフィード（新着が上）。 */
 export function ResearchFeed({
   cards,
   onRun,
@@ -104,7 +104,7 @@ export function ResearchFeed({
           <div className="grid min-h-[180px] flex-1 place-items-center rounded-xl border border-dashed border-line-dash">
             <div className="px-7 text-center">
               <p className="text-[12.5px] leading-[1.8] text-ink-4">
-                発話に反応して Web・社内(Slack)の
+                発話に反応して Web・社内の
                 <br />
                 関連情報がカードで届きます
               </p>

@@ -1,13 +1,18 @@
 // 社内情報検索のプロバイダ抽象。
 // 実コネクタ（Slack / Google Drive / Confluence / Jira / Box 等）は、
 // それぞれの OAuth・API を使ってこの InternalKnowledgeSource を実装して差し込む。
-// 実装済み: Slack（./slack.ts、SLACK_USER_TOKEN で有効化）。未設定時はモック。
+// 実装済み: Slack（./slack.ts、SLACK_USER_TOKEN で有効化）、
+//           Confluence（./confluence.ts、CONFLUENCE_BASE_URL 等 3 点セットで有効化）。
+// どちらも未設定のときはモック。
 import type { ResearchSource } from "@/lib/types";
 import { slackInternalSource } from "./slack";
+import { confluenceInternalSource, hasConfluenceConfig } from "./confluence";
 
 export interface InternalKnowledgeSource {
   /** 表示名。 */
   name: string;
+  /** 検索範囲の注記（0 件時のメッセージ等に使う）。 */
+  scope?: string;
   /** クエリに関連する社内ドキュメントを返す。 */
   search(query: string): Promise<ResearchSource[]>;
 }
@@ -38,10 +43,14 @@ export const mockInternalSource: InternalKnowledgeSource = {
 };
 
 /**
- * 環境に応じて使う社内情報源を選ぶ。
- * 将来: 複数の実コネクタ（Confluence / Drive 等）を束ねた実装を返す。
+ * 環境に応じて有効な社内情報源を列挙する。
+ * 複数の実コネクタが有効な場合は呼び出し側で並列実行して 1 枚の internal カードに束ねる
+ * （Slack / Confluence はどちらも 1 秒前後で、束ねてもレイテンシ目標 2〜3 秒に収まる）。
+ * 実コネクタが 1 つも無いときはモックのみを返す。
  */
-export function getInternalSource(): InternalKnowledgeSource {
-  if (process.env.SLACK_USER_TOKEN) return slackInternalSource;
-  return mockInternalSource;
+export function getInternalSources(): InternalKnowledgeSource[] {
+  const sources: InternalKnowledgeSource[] = [];
+  if (process.env.SLACK_USER_TOKEN) sources.push(slackInternalSource);
+  if (hasConfluenceConfig()) sources.push(confluenceInternalSource);
+  return sources.length > 0 ? sources : [mockInternalSource];
 }

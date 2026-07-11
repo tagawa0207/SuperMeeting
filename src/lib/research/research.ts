@@ -3,7 +3,7 @@
 import type { ResearchResult } from "@/lib/types";
 import { hasClaudeKey } from "@/lib/ai/claude";
 import { researchWithClaude } from "./web";
-import { getInternalSource } from "./internal";
+import { getInternalSources } from "./internal";
 
 /** Web 調査のみを実行する。キー未設定・失敗時はモック文言にフォールバック。 */
 export async function runWebResearch(query: string): Promise<ResearchResult> {
@@ -28,25 +28,30 @@ export async function runWebResearch(query: string): Promise<ResearchResult> {
   };
 }
 
-/** 社内情報検索のみを実行する。 */
+/** 社内情報検索のみを実行する。有効なコネクタを並列実行して 1 枚のカードに束ねる。 */
 export async function runInternalResearch(
   query: string,
 ): Promise<ResearchResult> {
-  const internalSource = getInternalSource();
-  const sources = await internalSource.search(query);
+  const internalSources = getInternalSources();
+  const sources = (
+    await Promise.all(internalSources.map((s) => s.search(query)))
+  ).flat();
+  const isMock =
+    internalSources.length === 1 && internalSources[0].name === "mock";
   // 0 件のとき無言だと「検索したが該当なし」がカード上で分からないため明示する。
   const summary =
-    sources.length === 0 && internalSource.name === "slack"
-      ? "Slack に該当するメッセージは見つかりませんでした（public チャンネルのみ検索）。"
+    sources.length === 0 && !isMock
+      ? `社内に該当する情報は見つかりませんでした（検索範囲: ${internalSources
+          .map((s) => s.scope ?? s.name)
+          .join("、")}）。`
       : "";
   return {
     query,
     summary,
     sources,
     engine: "mock",
-    internalNote:
-      internalSource.name === "mock"
-        ? "社内検索はモックです（Drive / Slack / Confluence 等の連携設定で実データに差し替え可能）"
-        : undefined,
+    internalNote: isMock
+      ? "社内検索はモックです（Drive / Slack / Confluence 等の連携設定で実データに差し替え可能）"
+      : undefined,
   };
 }

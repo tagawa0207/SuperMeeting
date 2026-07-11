@@ -77,7 +77,7 @@ export interface ResearchCard {
   id: string;
   /** 調査クエリ（Web 用の自然文）。 */
   query: string;
-  /** Slack 検索用のキーワード列（自動トリガー時に付与。フェーズ③）。 */
+  /** 社内検索（Slack / Confluence）用のキーワード列（自動トリガー時に付与。フェーズ③）。 */
   slackKeywords?: string;
   target: ResearchTarget;
   status: "queued" | "searching" | "done" | "error";
@@ -126,7 +126,7 @@ export interface TriggerRequest {
 export interface TriggerTask {
   /** 何を明らかにしたいか（Web 検索用の自然文）。 */
   intent: string;
-  /** Slack 検索用の短いキーワード列（2〜4語。in:/after: 修飾子可）。 */
+  /** 社内検索（Slack / Confluence 共通）用の短いキーワード列（2〜4語。in:/after: 修飾子は Slack のみ）。 */
   slackKeywords: string;
   target: TriggerTarget;
   /** 発端となった発言の引用。 */

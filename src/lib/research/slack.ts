@@ -123,6 +123,7 @@ export function matchToSources(match: SlackMatch): ResearchSource[] {
  */
 export const slackInternalSource: InternalKnowledgeSource = {
   name: "slack",
+  scope: "Slack public チャンネル",
   async search(query: string): Promise<ResearchSource[]> {
     const token = process.env.SLACK_USER_TOKEN;
     if (!token) return [];

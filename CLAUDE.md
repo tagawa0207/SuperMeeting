@@ -58,6 +58,7 @@ src/
       web.ts                 Claude web_search による Web 調査
       internal.ts            社内情報源の抽象 InternalKnowledgeSource + モック
       slack.ts               Slack コネクタ（search.messages、public 限定フィルタ）
+      confluence.ts          Confluence コネクタ（CQL siteSearch、個人スペース除外）
   components/                ボード / 各パネル / 話者バー / 調査 / Mermaid 描画
 
 extension/                   Chrome 拡張（MV3・ビルド不要）: 話者分離
@@ -78,7 +79,7 @@ extension/                   Chrome 拡張（MV3・ビルド不要）: 話者分
 ## 現状（実装済み）
 
 当初の理想8機能はすべて動作：
-書き起こし / 話者分離（拡張の自動＋手動、AI 担当振り分け）/ 議事整理 / 論点 / 決定・TODO / 図示 / 調査（Web検索）/ 社内情報検索（Slack 実コネクタ。`SLACK_USER_TOKEN` 未設定時はモック）。
+書き起こし / 話者分離（拡張の自動＋手動、AI 担当振り分け）/ 議事整理 / 論点 / 決定・TODO / 図示 / 調査（Web検索）/ 社内情報検索（Slack + Confluence 実コネクタ。未設定時はモック）。
 
 ## 仕様・アイデアの置き場
 
@@ -88,7 +89,7 @@ extension/                   Chrome 拡張（MV3・ビルド不要）: 話者分
 ## 次の候補（未実装・磨き込み）
 
 - 議事録エクスポート（Markdown / Slack 投稿 / Notion）
-- 社内検索の追加コネクタ（Drive / Confluence / Jira / Box。Slack は実装済み `src/lib/research/slack.ts`）
+- 社内検索の追加コネクタ（Drive / Jira / Box。Slack / Confluence は実装済み `src/lib/research/`）
 - 高精度クラウド STT（Whisper 等）、同時発話への耐性
 - Meet 拡張の自動話者検出セレクタの追従（`extension/src/meet/content.js` の `SELECTORS`）。
   2026-07 時点の実 Meet DOM に合わせ済み（名前 `span.notranslate` / 発言判定は `audioBars` の
